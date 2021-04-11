@@ -10,14 +10,26 @@ import { useMemo, useState } from 'react';
 import { Grid } from '@material-ui/core';
 import { makeStyles } from '@material-ui/core/styles';
 import { scaleBand, scaleLinear } from 'd3-scale';
-import { axisBottom } from 'd3-axis';
+import truncate from 'truncate-zero';
 
 import { Transaction } from '../../types.d';
 import { use12Months } from './hooks';
 
+const LEGEND_WIDTH = 50;
+
 const useStyles = makeStyles((theme) => ({
-    box: {
+    chart: {
         overflow: 'auto',
+        flexGrow: 1,
+        flexShrink: 0,
+    },
+    legend: {
+        flexShrink: 0,
+        flexGrow: 0,
+        flexBasis: LEGEND_WIDTH,
+    },
+    row: {
+        display: 'flex',
     },
 }));
 
@@ -58,47 +70,64 @@ export default function Yearly({ transactions }: { transactions: Transaction[] }
 
     return (
         <Grid container spacing={3} alignItems="stretch">
-            <Grid item xs={12} sm={12} classes={{ root: classes.box }}>
+            <Grid item xs={12} sm={12} className={classes.row}>
                 <svg
-                    viewBox={`0 0 ${canvasSize.width} ${canvasSize.height}`}
+                    viewBox={`0 0 ${LEGEND_WIDTH} ${canvasSize.height}`}
                     height={canvasSize.height}
-                    width={canvasSize.width}>
-                    <g transform={`translate(${margin.left}, ${margin.top})`}>
-                        <g>
-                            {moneyRange.ticks().map((t) => (
-                                <>
-                                    <text />
-                                    <line
-                                        x1={0}
-                                        y1={moneyRange(t)}
-                                        x2={chartWidth}
-                                        y2={moneyRange(t)}
-                                        stroke="currentColor"
-                                        strokeOpacity={0.2}
-                                    />
-                                </>
-                            ))}
-                        </g>
-                        {chartData.aggregation.map((m) => (
-                            <g key={m.name}>
-                                <rect
-                                    fill="#499195"
-                                    x={barBand(m.name)}
-                                    y={moneyRange(m.totalIncome)}
-                                    height={chartHeight - moneyRange(m.totalIncome)}
-                                    width={Math.floor(barBand.bandwidth() / 2)}
-                                />
-                                <rect
-                                    fill="#f1592a"
-                                    x={(barBand(m.name) || 0) + Math.floor(barBand.bandwidth() / 2)}
-                                    y={moneyRange(m.totalExpense)}
-                                    height={chartHeight - moneyRange(m.totalExpense)}
-                                    width={Math.floor(barBand.bandwidth() / 2)}
-                                />
+                    width={LEGEND_WIDTH}
+                    className={classes.legend}>
+                    <g transform={`translate(0, ${margin.top})`}>
+                        {moneyRange.ticks().map((t) => (
+                            <g transform={`translate(0, ${moneyRange(t)})`}>
+                                <text>${truncate(t)}</text>
                             </g>
                         ))}
                     </g>
                 </svg>
+                <div className={classes.chart}>
+                    <svg
+                        viewBox={`0 0 ${canvasSize.width} ${canvasSize.height}`}
+                        height={canvasSize.height}
+                        width={canvasSize.width}>
+                        <g transform={`translate(${margin.left}, ${margin.top})`}>
+                            <g>
+                                {moneyRange.ticks().map((t) => (
+                                    <g transform={`translate(0, ${moneyRange(t)})`}>
+                                        <line
+                                            x1={0}
+                                            y1={0}
+                                            x2={chartWidth}
+                                            y2={0}
+                                            stroke="currentColor"
+                                            strokeOpacity={0.2}
+                                        />
+                                    </g>
+                                ))}
+                            </g>
+                            {chartData.aggregation.map((m) => (
+                                <g key={m.name}>
+                                    <rect
+                                        fill="#499195"
+                                        x={barBand(m.name)}
+                                        y={moneyRange(m.totalIncome)}
+                                        height={chartHeight - moneyRange(m.totalIncome)}
+                                        width={Math.floor(barBand.bandwidth() / 2)}
+                                    />
+                                    <rect
+                                        fill="#f1592a"
+                                        x={
+                                            (barBand(m.name) || 0) +
+                                            Math.floor(barBand.bandwidth() / 2)
+                                        }
+                                        y={moneyRange(m.totalExpense)}
+                                        height={chartHeight - moneyRange(m.totalExpense)}
+                                        width={Math.floor(barBand.bandwidth() / 2)}
+                                    />
+                                </g>
+                            ))}
+                        </g>
+                    </svg>
+                </div>
             </Grid>
         </Grid>
     );

@@ -6,7 +6,6 @@
  * @copyright Toan Nguyen <nta.toan@gmail.com>
  *
  */
-import { totalmem } from 'os';
 import { useMemo } from 'react';
 import { Transaction, TransactionType } from '../../types.d';
 import { getMonthName } from '../../utils/format';
