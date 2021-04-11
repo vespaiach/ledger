@@ -12,10 +12,8 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { ArrowDropDown as ArrowDropDownIcon } from '@material-ui/icons/';
 import { usePopupState, bindTrigger, bindMenu } from 'material-ui-popup-state/hooks';
-import { Link } from 'react-router-dom';
 
 import { getMonthName } from '../../utils/format';
-import LineChartIcon from '../../components/Icons/LineChart';
 import Monthly from './Monthly';
 import { AppRootState, Transaction } from '../../types.d';
 import Yearly from './Yearly';
@@ -86,8 +84,10 @@ export default function Report() {
     if (month !== -1) {
         el = <Monthly transactions={transactions} year={year} month={month} />;
     } else {
-        el = <Yearly transactions={transactions} />;
+        el = <Yearly year={year} transactions={transactions} />;
     }
+
+    console.log(month);
 
     return (
         <>
@@ -122,6 +122,7 @@ export default function Report() {
                     </Typography>
                     <Menu {...bindMenu(monthPopupState)}>
                         <MenuItem
+                            key={-1}
                             selected={month === -1}
                             onClick={() => {
                                 setMonth(-1);
