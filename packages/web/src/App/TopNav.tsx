@@ -10,7 +10,6 @@ import {
     ListItemText,
 } from '@material-ui/core';
 import {
-    ExitToAppRounded as ExitToAppRoundedIcon,
     MenuBookRounded as MenuBookRoundedIcon,
     SyncRounded as SyncRoundedIcon,
 } from '@material-ui/icons';
@@ -90,10 +89,9 @@ const useStyles = makeStyles((theme) => ({
 interface TopNavProps {
     elevation?: number;
     onRefesh: () => void;
-    onSignout: () => void;
 }
 
-export default function TopNav({ elevation = 0, onRefesh, onSignout }: TopNavProps) {
+export default function TopNav({ elevation = 0, onRefesh }: TopNavProps) {
     const classes = useStyles();
     const popupState = usePopupState({ variant: 'popover', popupId: 'settingMenu' });
 
@@ -135,16 +133,6 @@ export default function TopNav({ elevation = 0, onRefesh, onSignout }: TopNavPro
                             <SyncRoundedIcon fontSize="small" />
                         </ListItemIcon>
                         <ListItemText primary="Re-fetch data" />
-                    </MenuItem>
-                    <MenuItem
-                        onClick={() => {
-                            onSignout();
-                            popupState.close();
-                        }}>
-                        <ListItemIcon>
-                            <ExitToAppRoundedIcon fontSize="small" />
-                        </ListItemIcon>
-                        <ListItemText primary="Sign Out" />
                     </MenuItem>
                 </Menu>
             </Toolbar>

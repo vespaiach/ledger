@@ -7,7 +7,6 @@
  *
  */
 
-import { REQUIRE_SIGNIN, CLOSE_SIGNIN } from '../../actions/auth';
 import { BUSY, CLEAR_MESSAGE, IDLE, SHOW_MESSAGE } from '../../actions/system';
 import { Action, AppBusyCode, AppMessageCode, WholeAppState } from '../../types.d';
 import { createReducer } from '../../utils/reducer';
@@ -20,18 +19,6 @@ const defaultState: WholeAppState = {
 };
 
 export default createReducer<WholeAppState>(defaultState, {
-    [REQUIRE_SIGNIN]: (state, { payload }: Action<string, Action | undefined>) => ({
-        ...state,
-        showSigninDialog: true,
-        retainedAction: payload || null,
-    }),
-
-    [CLOSE_SIGNIN]: (state) => ({
-        ...state,
-        showSigninDialog: false,
-        retainedAction: null,
-    }),
-
     [SHOW_MESSAGE]: (state, { payload }: Action<string, AppMessageCode>) => {
         if (payload) {
             return {

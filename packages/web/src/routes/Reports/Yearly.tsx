@@ -56,7 +56,7 @@ const useStyles = makeStyles((theme) => ({
         },
     },
     titlePanel: {
-        display: 'flex',
+        marginBottom: 16,
     },
 }));
 
@@ -104,7 +104,7 @@ export default function Yearly({
 
     return (
         <Grid container spacing={3} alignItems="stretch">
-            <Grid item xs={12}>
+            <Grid item xs={12} className={classes.titlePanel}>
                 <Typography variant="h5" component="h2">
                     Transaction in {year}
                 </Typography>

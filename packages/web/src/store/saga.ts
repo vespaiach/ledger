@@ -18,9 +18,6 @@ import {
     transactionList,
     transactionRequestAction,
     yearList,
-    transactionCreatingRequest,
-    transactionDeletingRequest,
-    transactionUpdatingRequest,
     GET_TRANSACTION,
     RECORD_TRANSACTION,
     UPDATE_TRANSACTION,
@@ -34,25 +31,10 @@ import {
     APIError,
     RemoteRepository,
     AppMessageCode,
+    AppRootState,
 } from '../types.d';
 
-import { clearToken, setToken } from '../utils/token';
-import { CLOSE_SIGNIN, requireSigninAction, SIGNIN, SIGNOUT } from '../actions/auth';
-
 type YieldReturn<T> = T extends Promise<infer U> ? U : T;
-
-/**
- * Check if server return 401:
- *  - show login dialog
- *  - save current action to allow resuming after login
- */
-export function* check401(response: HTTPResult<APIError>, currentAction: Action) {
-    if (response.status === 401) {
-        yield all([put(requireSigninAction(currentAction)), put(appIdleAction())]);
-    } else {
-        yield put(showMessageAction(response.data.code));
-    }
-}
 
 /**
  * Fetch a list of transaction records by year
@@ -73,7 +55,7 @@ export function* fetchTransactionRequest(repo: RemoteRepository, year: number) {
             yield put(transactionList(response.data as Transaction[]));
             yield put(appIdleAction());
         } else {
-            yield check401(response as HTTPResult<APIError>, transactionRequestAction(year));
+            yield put(showMessageAction((response as HTTPResult<APIError>).data.code));
         }
     } catch (e) {
         console.error(e);
@@ -85,7 +67,9 @@ export function* fetchTransactionRequest(repo: RemoteRepository, year: number) {
  * Fetch a list of years
  */
 export function* fetchYearListRequest(repo: RemoteRepository) {
-    const refetch = yield select((state) => state.transaction.refetchListYears);
+    const refetch: YieldReturn<ReturnType<(state: AppRootState) => boolean>> = yield select(
+        (state) => state.transaction.refetchListYears
+    );
 
     if (refetch) {
         try {
@@ -114,10 +98,12 @@ export function* createTransactionRequest(repo: RemoteRepository, data: Omit<Tra
     yield put(appIdleAction());
 
     if (response.ok) {
-        const year = yield select((state) => state.transaction.year);
+        const year: YieldReturn<ReturnType<(state: AppRootState) => number>> = yield select(
+            (state) => state.transaction.year
+        );
         yield put(transactionRequestAction(year));
     } else {
-        yield check401(response as HTTPResult<APIError>, transactionCreatingRequest(data));
+        yield put(showMessageAction((response as HTTPResult<APIError>).data.code));
     }
 }
 
@@ -133,10 +119,10 @@ export function* updateTransactionRequest(repo: RemoteRepository, data: Transact
     yield put(appIdleAction());
 
     if (response.ok) {
-        const year = yield select((state) => state.transaction.year);
+        const year: YieldReturn<number> = yield select((state) => state.transaction.year);
         yield put(transactionRequestAction(year));
     } else {
-        yield check401(response as HTTPResult<APIError>, transactionUpdatingRequest(data));
+        yield put(showMessageAction((response as HTTPResult<APIError>).data.code));
     }
 }
 
@@ -145,81 +131,17 @@ export function* updateTransactionRequest(repo: RemoteRepository, data: Transact
  */
 export function* deleteTransactionRequest(repo: RemoteRepository, data: number) {
     yield put(appSavingAction());
-    const response: YieldReturn<ReturnType<typeof repo.deleteTransaction>> = yield call(
+    const response: YieldReturn<Promise<HTTPResult<any> | HTTPResult<APIError>>> = yield call(
         repo.deleteTransaction,
         data
     );
     yield put(appIdleAction());
 
     if (response.ok) {
-        const year = yield select((state) => state.transaction.year);
+        const year: YieldReturn<number> = yield select((state) => state.transaction.year);
         yield put(transactionRequestAction(year));
     } else {
-        yield check401(response as HTTPResult<APIError>, transactionDeletingRequest(data));
-    }
-}
-
-/**
- *
- * Signin request.
- *  - success: save token to localstorage and return true
- *  - fail   : show error flash message and return false
- *
- * @param {*} data
- * {
- *      email: string,
- *      password: string,
- *      remember: boolean
- * }
- */
-export function* signinRequest(repo: RemoteRepository, data: { email: string; password: string }) {
-    try {
-        yield put(appLoadingAction());
-        const response: YieldReturn<ReturnType<typeof repo.signin>> = yield call(repo.signin, data);
-        yield put(appIdleAction());
-
-        if (response.ok) {
-            const result = yield call(setToken, (response.data as { token: string }).token);
-            if (result) {
-                const resumingAction = yield select((state) => state.common.retainedAction);
-                if (resumingAction) {
-                    yield put({ ...resumingAction });
-                }
-                yield put({ type: CLOSE_SIGNIN });
-                return true;
-            } else {
-                yield put(showMessageAction(AppMessageCode.UnknownError));
-                return false;
-            }
-        } else {
-            yield put(showMessageAction((response.data as APIError).code));
-            return false;
-        }
-    } catch (e) {
-        console.error(e);
-        yield put(showMessageAction(AppMessageCode.NetworkError));
-    }
-}
-
-/**
- * Sign out request
- */
-export function* signoutRequest(repo: RemoteRepository) {
-    try {
-        const response: YieldReturn<ReturnType<typeof repo.signout>> = yield call(repo.signout);
-
-        if (response.ok) {
-            yield put(showMessageAction(AppMessageCode.SignoutSuccess));
-            yield call(() => {
-                clearToken();
-                return Promise.resolve(true);
-            });
-        } else {
-            yield put(showMessageAction((response as HTTPResult<APIError>).data.code));
-        }
-    } catch (e) {
-        console.error(e);
-        yield put(showMessageAction(AppMessageCode.NetworkError));
+        yield put(showMessageAction((response as HTTPResult<APIError>).data.code));
     }
 }
 
@@ -274,34 +196,6 @@ export function watchDeletingRequest(repository: RemoteRepository) {
 }
 
 /**
- * Watch for sign in request.
- */
-function watchSigninRequest(repository: RemoteRepository) {
-    return function* () {
-        while (true) {
-            const { payload }: Action<string, { email: string; password: string }> = yield take(
-                SIGNIN
-            );
-            if (payload) {
-                yield signinRequest(repository, payload);
-            }
-        }
-    };
-}
-
-/**
- * Watch for sign out request.
- */
-export function watchSignoutRequest(repository: RemoteRepository) {
-    return function* () {
-        while (true) {
-            yield take(SIGNOUT);
-            yield signoutRequest(repository);
-        }
-    };
-}
-
-/**
  * Watch for years list request.
  */
 export function watchYearRequest(repository: RemoteRepository) {
@@ -321,8 +215,6 @@ export default function rootSaga(repository: RemoteRepository) {
                 watchCreatingRequest(repository),
                 watchUpdatingRequest(repository),
                 watchDeletingRequest(repository),
-                watchSigninRequest(repository),
-                watchSignoutRequest(repository),
                 watchYearRequest(repository),
             ].map(fork)
         );
